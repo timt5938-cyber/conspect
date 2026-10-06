@@ -14,28 +14,24 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
-    # Telegram Bot
-    TELEGRAM_BOT_TOKEN: str = "8941440413:AAHQob9S6KPZBPaJS3czdkY4pCM3rB68Nmc"
-    
     # Gemini AI
     GEMINI_API_KEY: Optional[str] = None
     GEMINI_MODEL: str = "gemini-2.5-flash"
 
-    # Supabase
-    SUPABASE_URL: str = "https://faxtkubhxjesghpduiba.supabase.co"
-    SUPABASE_KEY: str = "sb_publishable_OS78OrMo24Lj6D--fIv_YA_qLftDfK3"
-    SUPABASE_ANON_KEY: str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZheHRrdWJoeGplc2docGR1aWJhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk5NzEwMjksImV4cCI6MjEwNTU0NzAyOX0.LLMR5xW3Fq98UyJBnJ1KIrjY-Rc_D1h3X9LiDsUWJa8"
+    # Supabase (conspect)
+    SUPABASE_URL: str = "https://ddvzcqeunaappryvbuov.supabase.co"
+    SUPABASE_KEY: str = "sb_publishable_qt25E54VIPTgokQZwkMasw_1H1KkbP3"
+    SUPABASE_ANON_KEY: str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkdnpjcWV1bmFhcHByeXZidW92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyODg2OTEsImV4cCI6MjEwNjg2NDY5MX0.BEmdtY1kQFusiCnsmtGrXYTMIwmpUY2cD0PilLje6tU"
     SUPABASE_BUCKET: str = "conspectus-assets"
 
-    # Web & Mini App
+    # Web App & Server
     API_HOST: str = "0.0.0.0"
     API_PORT: int = 8000
-    MINI_APP_URL: str = "https://tgapp-ochre.vercel.app"
 
     # Paths
     BASE_DIR: Path = BASE_DIR
     ROOT_DIR: Path = ROOT_DIR
-    STORAGE_DIR: Path = Path("/tmp/storage") if os.environ.get("VERCEL") else (ROOT_DIR / "storage")
+    STORAGE_DIR: Path = ROOT_DIR / "storage"
     PRESETS_DIR: Path = BASE_DIR / "static" / "presets"
     TEMPLATES_DIR: Path = BASE_DIR / "static" / "templates"
 
@@ -56,48 +52,33 @@ class Settings(BaseSettings):
             return None
         return str(v)
 
-    @field_validator("TELEGRAM_BOT_TOKEN", mode="before")
-    @classmethod
-    def validate_bot_token(cls, v: Any) -> str:
-        if v is None or v == "" or (isinstance(v, str) and not v.strip()):
-            return "8941440413:AAHQob9S6KPZBPaJS3czdkY4pCM3rB68Nmc"
-        return str(v)
-
     @field_validator("SUPABASE_URL", mode="before")
     @classmethod
     def validate_supabase_url(cls, v: Any) -> str:
         if v is None or v == "" or (isinstance(v, str) and not v.strip()):
-            return "https://faxtkubhxjesghpduiba.supabase.co"
+            return "https://ddvzcqeunaappryvbuov.supabase.co"
         return str(v)
 
     @field_validator("SUPABASE_KEY", mode="before")
     @classmethod
     def validate_supabase_key(cls, v: Any) -> str:
         if v is None or v == "" or (isinstance(v, str) and not v.strip()):
-            return "sb_publishable_OS78OrMo24Lj6D--fIv_YA_qLftDfK3"
+            return "sb_publishable_qt25E54VIPTgokQZwkMasw_1H1KkbP3"
         return str(v)
 
     @field_validator("SUPABASE_ANON_KEY", mode="before")
     @classmethod
     def validate_supabase_anon_key(cls, v: Any) -> str:
         if v is None or v == "" or (isinstance(v, str) and not v.strip()):
-            return "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZheHRrdWJoeGplc2docGR1aWJhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk5NzEwMjksImV4cCI6MjEwNTU0NzAyOX0.LLMR5xW3Fq98UyJBnJ1KIrjY-Rc_D1h3X9LiDsUWJa8"
-        return str(v)
-
-    @field_validator("MINI_APP_URL", mode="before")
-    @classmethod
-    def validate_mini_app_url(cls, v: Any) -> str:
-        if v is None or v == "" or (isinstance(v, str) and not v.strip()):
-            return "https://tgapp-ochre.vercel.app"
+            return "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkdnpjcWV1bmFhcHByeXZidW92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyODg2OTEsImV4cCI6MjEwNjg2NDY5MX0.BEmdtY1kQFusiCnsmtGrXYTMIwmpUY2cD0PilLje6tU"
         return str(v)
 
 settings = Settings()
 
-# Ensure directories exist safely
+# Ensure directories exist
 try:
     settings.STORAGE_DIR.mkdir(parents=True, exist_ok=True)
     settings.PRESETS_DIR.mkdir(parents=True, exist_ok=True)
     settings.TEMPLATES_DIR.mkdir(parents=True, exist_ok=True)
 except Exception:
     pass
-

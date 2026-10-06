@@ -1,13 +1,12 @@
 [project]
-name = "tgapp"
-version = "1.0.0"
-description = "Telegram Handwritten Conspectus Studio & Bot"
+name = "conspect"
+version = "2.0.0"
+description = "Conspectus Liquid Chrome Handwriting Studio"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "fastapi>=0.110.0",
     "uvicorn>=0.28.0",
-    "aiogram>=3.4.0",
     "opencv-python-headless>=4.9.0",
     "pillow>=10.2.0",
     "reportlab>=4.1.0",
@@ -21,6 +20,3 @@ dependencies = [
     "aiofiles>=23.2.1",
     "numpy>=1.26.0",
 ]
-
-[tool.vercel]
-entrypoint = "api.backend.app.main:app"

@@ -14,7 +14,6 @@ from ..rendering.paper_canvas import paper_canvas
 from ..cv.sheet_detector import sheet_detector
 from ..cv.glyph_extractor import glyph_extractor
 from ..storage.supabase_client import supabase_service
-from ..bot.delivery import delivery_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["studio"])
@@ -30,9 +29,9 @@ class PreviewRequest(BaseModel):
     humanize: bool = True
 
 class GenerateRequest(BaseModel):
-    user_id: int
+    user_id: Optional[str] = None
     text: Optional[str] = None
-    mode: str = "smart" # "smart" or "verbatim"
+    mode: str = "smart"  # "smart" or "verbatim"
     paper_style: str = "squared_5mm"
     has_margins: bool = True
     pen_color: str = "blue_ballpoint"
@@ -52,33 +51,25 @@ async def get_presets():
             {"id": "segoe_print", "name": "Печатный конспект", "desc": "Прямые четкие буквы с легким наклоном"}
         ],
         "paper_styles": [
-            {"id": "squared_5mm", "name": "Клетка 5 мм (Школьная/Студенческая)"},
+            {"id": "squared_5mm", "name": "Клетка 5 мм (Студенческая с полями)"},
             {"id": "ruled", "name": "Линейка"},
-            {"id": "blank", "name": "Белый лист"}
+            {"id": "blank", "name": "Белый чистый лист"}
         ],
         "pen_colors": [
             {"id": "blue_ballpoint", "name": "Синяя шариковая", "hex": "#1e40af"},
-            {"id": "gel_black", "name": "Черная гелевая", "hex": "#18181b"},
-            {"id": "purple", "name": "Фиолетовая чернильная", "hex": "#6b21a8"},
-            {"id": "red_ink", "name": "Красная ручка", "hex": "#dc2626"}
+            {"id": "black_gel", "name": "Черная гелевая", "hex": "#0f172a"},
+            {"id": "purple_ink", "name": "Фиолетовые чернила", "hex": "#581c87"},
+            {"id": "red_pen", "name": "Красная ручка", "hex": "#991b1b"},
+            {"id": "pencil", "name": "Карандаш HB", "hex": "#475569"}
         ]
     }
 
 @router.post("/preview")
 async def preview_page(req: PreviewRequest):
-    """Generates an instant base64 preview of Page 1 for the TMA canvas."""
+    """Returns a base64 JPEG image of the first rendered handwritten page for instant preview."""
     try:
-        sample_text = req.text if req.text.strip() else (
-            "Тема: Пример конспекта\n\n"
-            "1. Введение в тему\n"
-            "- Рукописный синтез с естественными неровностями строк.\n"
-            "[ВАЖНО] Качественная имитация тетрадного листа с полями.\n"
-            "[ФОРМУЛА] E = m * c^2\n"
-            "- Поддержка умного конспектирования через нейросеть Gemini."
-        )
-
         pages = handwriting_engine.render_conspectus(
-            text=sample_text,
+            text=req.text,
             paper_style=req.paper_style,
             has_margins=req.has_margins,
             pen_color=req.pen_color,
@@ -87,35 +78,32 @@ async def preview_page(req: PreviewRequest):
             slant=req.slant,
             humanize=req.humanize
         )
+        if not pages:
+            raise HTTPException(status_code=400, detail="Failed to render page")
 
-        preview_img = pages[0]
         buf = BytesIO()
-        preview_img.convert("RGB").save(buf, format="JPEG", quality=80)
-        b64_str = base64.b64encode(buf.getvalue()).decode("utf-8")
-
+        pages[0].convert("RGB").save(buf, format="JPEG", quality=85)
+        b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
         return {
-            "page_preview_base64": f"data:image/jpeg;base64,{b64_str}",
+            "page_preview_base64": f"data:image/jpeg;base64,{b64}",
             "total_pages": len(pages)
         }
     except Exception as e:
-        logger.error("Preview error: %s", e)
+        logger.error("Preview render error: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/generate")
-async def generate_and_deliver(req: GenerateRequest):
-    """
-    Synthesizes the complete conspectus, builds the PDF, 
-    delivers it directly to the user's Telegram chat, and stores records in Supabase.
-    """
+async def generate_conspectus(req: GenerateRequest):
+    """Synthesizes text through Gemini, renders multi-page notebook sheets, and builds PDF."""
     try:
-        # 1. Format/summarize text via Gemini
+        # 1. Structure raw text with Gemini
         formatted_text = await gemini_service.generate_conspectus_text(
-            raw_text=req.text,
+            raw_text=req.text or "Лекция без текста",
             mode=req.mode,
             custom_key=req.custom_gemini_key
         )
 
-        # 2. Render handwritten pages
+        # 2. Render all handwritten pages
         pages = handwriting_engine.render_conspectus(
             text=formatted_text,
             paper_style=req.paper_style,
@@ -127,13 +115,14 @@ async def generate_and_deliver(req: GenerateRequest):
             humanize=req.humanize
         )
 
-        # 3. Build PDF
+        # 3. Build PDF bytes
         pdf_bytes = pdf_builder.build_pdf_from_images(pages)
 
         # 4. First page preview JPEG
         pbuf = BytesIO()
         pages[0].convert("RGB").save(pbuf, format="JPEG", quality=85)
         preview_bytes = pbuf.getvalue()
+        preview_b64 = base64.b64encode(preview_bytes).decode("utf-8")
 
         # Extract title for doc
         title = "Конспект"
@@ -142,59 +131,54 @@ async def generate_and_deliver(req: GenerateRequest):
                 title = line.replace("Тема:", "").strip()
                 break
 
-        # 5. Deliver to user's Telegram chat
-        delivery_ok = await delivery_service.send_conspectus_pdf(
-            chat_id=req.user_id,
-            pdf_bytes=pdf_bytes,
-            title=title,
-            preview_bytes=preview_bytes
-        )
+        pdf_url = None
+        preview_url = None
 
-        # 6. Upload to Supabase storage asynchronously
-        pdf_url = await supabase_service.upload_asset(
-            file_bytes=pdf_bytes,
-            remote_filename=f"users/{req.user_id}/conspectus_{title[:20]}.pdf",
-            content_type="application/pdf"
-        )
+        # 5. If user is authenticated, upload to Supabase storage & DB
+        if req.user_id:
+            safe_title = "".join(c for c in title if c.isalnum() or c in (" ", "-", "_"))[:20]
+            pdf_url = await supabase_service.upload_asset(
+                file_bytes=pdf_bytes,
+                remote_filename=f"users/{req.user_id}/conspectus_{safe_title}.pdf",
+                content_type="application/pdf"
+            )
+            preview_url = await supabase_service.upload_asset(
+                file_bytes=preview_bytes,
+                remote_filename=f"users/{req.user_id}/preview_{safe_title}.jpg",
+                content_type="image/jpeg"
+            )
 
-        # Log in DB
-        await supabase_service.log_conspectus(
-            user_id=req.user_id,
-            title=title,
-            mode=req.mode,
-            page_count=len(pages),
-            pdf_url=pdf_url
-        )
+            await supabase_service.log_conspectus(
+                user_id=req.user_id,
+                title=title,
+                mode=req.mode,
+                page_count=len(pages),
+                pdf_url=pdf_url,
+                preview_url=preview_url
+            )
+
+        pdf_b64 = base64.b64encode(pdf_bytes).decode("utf-8")
 
         return {
             "success": True,
             "title": title,
             "page_count": len(pages),
-            "delivered_to_chat": delivery_ok,
-            "pdf_url": pdf_url
+            "pdf_url": pdf_url,
+            "pdf_base64": f"data:application/pdf;base64,{pdf_b64}",
+            "preview_base64": f"data:image/jpeg;base64,{preview_b64}",
+            "formatted_text": formatted_text
         }
 
     except Exception as e:
         logger.error("Generation error: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/calibration-template")
-async def get_calibration_template():
-    """Returns downloadable printable calibration sheet image."""
-    img = sheet_detector.generate_calibration_template_image()
-    buf = BytesIO()
-    img.save(buf, format="PNG")
-    buf.seek(0)
-    return StreamingResponse(buf, media_type="image/png", headers={
-        "Content-Disposition": "attachment; filename=calibration_template.png"
-    })
-
 @router.post("/calibrate")
 async def process_calibration_upload(
-    user_id: int = Form(...),
+    user_id: str = Form(...),
     photo: UploadFile = File(...)
 ):
-    """Processes uploaded calibration sheet photo, extracts glyphs and saves to Supabase."""
+    """Processes uploaded plain A4 photo, extracts glyphs and saves to Supabase."""
     try:
         contents = await photo.read()
         nparr = np.frombuffer(contents, np.uint8)
@@ -226,3 +210,9 @@ async def process_calibration_upload(
     except Exception as e:
         logger.error("Calibration error: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/user-conspectuses/{user_id}")
+async def get_user_conspectuses(user_id: str):
+    """Returns list of conspectuses created by the user."""
+    items = await supabase_service.get_user_conspectuses(user_id)
+    return {"conspectuses": items}

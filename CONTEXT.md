@@ -1,61 +1,63 @@
-# Conspectus Handwriting Bot
+# Conspectus Web Studio (Конспект)
 
-A Telegram Mini App system that turns raw text, topics, or voice into realistic handwritten lecture notes on notebook paper, mimicking handwriting.
+A web-based platform with a dark liquid chrome aesthetic that turns raw lecture materials (text, audio recordings, photo slides) into realistic handwritten notes on authentic notebook paper (5mm squared, lined, red margins, natural jitter) with Supabase Cloud Auth and storage.
 
-## Language
+## Architecture & Routes
+
+**Showcase Landing (`/`)**:
+The public presentation entrance inspired by `timt5938-cyber/sait`, featuring a 3D Liquid Chrome logo, animated dark bento grid, smooth scrolling, step-by-step handwriting calibration instructions, and an embedded Interactive Sandbox Demo.
+_Avoid_: Static promo, template splash
+
+**Liquid Chrome Hero**:
+The kinetic entrance centerpiece rendering reflective metallic shaders on canvas with atmospheric glows, status badges, and direct navigation into the studio.
+_Avoid_: Flat text logo, static SVG icon
+
+**Kinetic Bento Showcase**:
+Card-based architectural overview featuring an interactive live notebook canvas (5mm grid, margins, ink jitter), Gemini multimodal lecture distillation, and multi-page vector PDF compilation.
+_Avoid_: Plain feature list, bullet points
+
+**Scroll-Guided Handwriting Walkthrough**:
+An animated step-by-step instructional journey demonstrating how to write Cyrillic letters and digits on a plain A4 paper and convert them into a digital font without printable templates.
+_Avoid_: Buried documentation, static PDF manual
+
+**Interactive Sandbox Demo**:
+A lightweight live preview widget embedded directly in the landing bento grid allowing unauthenticated visitors to test paper grids, pen styles, and rendering before signing up.
+_Avoid_: Fake mockup, static screenshot
+
+**Auth Gateway (`/auth`)**:
+Dedicated authentication view powered directly by Supabase Auth (Email + Password registration and login) with dark chrome glassmorphism card styling and error handling.
+_Avoid_: Basic browser popup, third-party iframe
+
+**Studio Workspace (`/app`)**:
+The protected web workspace where authenticated users create conspectuses, configure paper styles and pen colors, calibrate custom A4 handwriting, view multi-page live previews, and download multi-page PDFs.
+_Avoid_: Mini App iframe, Telegram webview
+
+## Domain Language
 
 **Handwriting Synthesis**:
 Rendering digital text onto virtual notebook/ruled paper to visually resemble human handwriting, including natural variations, slant, and ink flow.
 _Avoid_: Font printing, plain OCR
 
-**Handwriting Sample**:
-Photos or scans provided by the user demonstrating their writing style.
-_Avoid_: Dataset, training dump
-
-**Calibration Sheet**:
-A standardized printable or drawn grid containing alphabet letters, numbers, and symbols that the user fills out to capture their individual handwriting.
-_Avoid_: Random note, freeform scan
+**Freeform A4 Calibration**:
+Handwritten samples written on a standard blank A4 paper (1. Uppercase Cyrillic, 2. Lowercase Cyrillic, 3. Digits 0-9) without printed templates.
+_Avoid_: Template blank, printable grid
 
 **Glyph Extraction**:
-The computer vision process of isolating, cleaning, and vectorizing individual handwritten characters from a calibration sheet.
+Computer vision perspective warping and line segmentation to isolate and vectorize individual handwritten characters from the user's A4 sheet.
 _Avoid_: Character recognition, OCR text dump
 
-**Preset Font**:
-A built-in curated handwriting style (e.g., Neat Student, Swift Cursive, Semi-print) available immediately without prior user calibration.
-_Avoid_: Stock font, system font
-
 **Personal Font**:
-A custom font or glyph library synthesized directly from the user's uploaded Calibration Sheet to mimic their authentic writing.
+A custom glyph library synthesized directly from the user's uploaded A4 photo and stored in Supabase under their user profile.
 _Avoid_: User profile, clone font
 
-**Raw Input**:
-The source materials submitted by the user, such as text, audio, or slide images.
-_Avoid_: Prompt, message payload
-
 **Synthesis Mode**:
-The processing strategy chosen by the user: either *Smart Conspectus* (LLM extraction and summarization) or *Verbatim* (word-for-word replication).
+The processing strategy chosen by the user: either *Smart Conspectus* (Gemini AI summarization, student abbreviations, structured definitions/formulas) or *Verbatim* (word-for-word reproduction).
 _Avoid_: Prompt style, output flag
 
 **Notebook Style**:
-The visual background configuration for rendered pages, including ruled lines, grid cells, red margins, and paper textures.
+The visual background configuration for rendered pages: 5mm squared (клетка), ruled (линейка), or blank sheet with authentic red margins.
 _Avoid_: Theme, template canvas
 
-**Paper Grid**:
-A mathematically generated or textured 5mm squared (клетка) or ruled (линейка) canvas with authentic school/university margin lines.
-_Avoid_: Graph paper image, background wallpaper
-
-**Ink Style**:
-The rendering characteristics of the pen stroke, including color palette (blue ballpoint, gel black, red), line width variation, and natural jitter.
-_Avoid_: Color picker, brush preset
-
-**Humanization Artifacts**:
-Procedural imperfections injected into the rendering pipeline (baseline jitter, ink flow variations, slant variation, intentional strikethroughs, marker highlighting) to prevent synthetic appearance.
-_Avoid_: Render bugs, random noise
-
 **Cloud Store**:
-The managed Supabase cloud database and object storage housing user profiles, custom font glyph bundles, and compiled conspectuses.
+The managed Supabase project `conspect` housing database tables (`user_profiles`, `user_fonts`, `conspectuses`), authentication sessions, and storage buckets (`conspectus-assets`).
 _Avoid_: Local dump, hard drive cache
-
-**Conspectus**:
-The structured final note (synthesized text and structure) ready to be rendered onto paper.
-_Avoid_: Summary dump, raw output

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { X, Upload, CheckCircle2, AlertCircle, Loader2, Camera } from 'lucide-react';
+import { X, UploadCloud, CheckCircle2, AlertCircle, Loader2, Camera, Sparkles, FileText } from 'lucide-react';
 import { api } from '../api/client';
 
 interface CalibrationModalProps {
-  userId: number;
+  userId: string;
   isOpen: boolean;
   onClose: () => void;
   onCalibrationSuccess: () => void;
@@ -17,6 +17,7 @@ export const CalibrationModal: React.FC<CalibrationModalProps> = ({
 }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [resultMessage, setResultMessage] = useState<string | null>(null);
+  const [extractedCount, setExtractedCount] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   if (!isOpen) return null;
@@ -28,68 +29,97 @@ export const CalibrationModal: React.FC<CalibrationModalProps> = ({
     setIsUploading(true);
     setResultMessage(null);
     setErrorMessage(null);
+    setExtractedCount(null);
 
     try {
       const res = await api.uploadCalibration(userId, file);
-      setResultMessage(res.message);
+      setResultMessage(res.message || 'Калибровка успешно завершена!');
+      setExtractedCount(res.extracted_count);
       onCalibrationSuccess();
     } catch (err: any) {
-      setErrorMessage(err.message || 'Ошибка обработки фото');
+      setErrorMessage(err.message || 'Ошибка обработки фото листа А4');
     } finally {
       setIsUploading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white rounded-3xl max-w-md w-full p-5 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-          <h2 className="text-base font-bold text-slate-800 flex items-center space-x-2">
-            <Camera className="w-5 h-5 text-blue-600" />
-            <span>Калибровка вашего почерка</span>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+      <div 
+        className="relative w-full max-w-lg rounded-3xl bg-[#0B1120]/95 border border-white/10 p-6 sm:p-8 shadow-2xl backdrop-blur-2xl text-white overflow-hidden max-h-[90vh] overflow-y-auto cyber-scrollbar"
+        style={{
+          boxShadow: '0 25px 60px -15px rgba(0,0,0,0.9), 0 0 35px -5px rgba(45, 212, 191, 0.2)'
+        }}
+      >
+        {/* Glow */}
+        <div className="absolute -top-24 -right-24 w-48 h-48 bg-[#2DD4BF]/10 rounded-full blur-3xl pointer-events-none" />
+
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          className="absolute top-5 right-5 p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        {/* Header */}
+        <div className="mb-6">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-semibold bg-[#2DD4BF]/10 text-[#2DD4BF] border border-[#2DD4BF]/20 mb-3">
+            <Camera className="w-3.5 h-3.5" />
+            A4 OpenCV Calibration
+          </div>
+          <h2 className="text-2xl font-extrabold tracking-tight text-white">
+            Калибровка вашего почерка
           </h2>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <p className="text-xs text-slate-400 mt-1">
+            Компьютерное зрение сегментирует рукописные глифы и обучит векторную модель вашим особенностям нажима и наклона.
+          </p>
         </div>
 
-        {/* Instructions */}
-        <div className="p-4 rounded-2xl bg-blue-50/50 border border-blue-100 space-y-2.5 text-xs text-slate-700">
-          <p className="font-bold text-slate-900 text-sm">Как добавить свой почерк:</p>
-          <p className="leading-relaxed">
-            Возьмите любой чистый лист бумаги (А4 или тетрадный) и напишите от руки шариковой или гелевой ручкой:
+        {/* Instructions Card */}
+        <div className="p-4 rounded-2xl bg-[#050811] border border-white/10 space-y-3 text-xs mb-6">
+          <p className="font-bold text-white text-sm flex items-center gap-2">
+            <FileText className="w-4 h-4 text-[#2DD4BF]" />
+            Что написать на чистом листе А4:
           </p>
-          <div className="space-y-1.5 bg-white p-3 rounded-xl border border-blue-150 font-mono text-[11px] text-slate-800">
+          <div className="space-y-2 font-mono text-[11px] bg-white/5 p-3.5 rounded-xl border border-white/5">
             <div>
-              <span className="font-bold text-blue-600">1. Заглавные:</span> А Б В Г Д Е Ё Ж З И Й К Л М Н О П Р С Т У Ф Х Ц Ч Ш Щ Ъ Ы Ь Э Ю Я
+              <span className="font-bold text-[#2DD4BF]">1. Заглавные: </span>
+              <span className="text-slate-300">А Б В Г Д Е Ё Ж З И Й К Л М Н О П Р С Т У Ф Х Ц Ч Ш Щ Ъ Ы Ь Э Ю Я</span>
             </div>
             <div>
-              <span className="font-bold text-blue-600">2. Строчные:</span> а б в г д е ё ж з и й к л м н о п р с т у ф х ц ч ш щ ъ ы ь э ю я
+              <span className="font-bold text-[#2DD4BF]">2. Строчные: </span>
+              <span className="text-slate-300">а б в г д е ё ж з и й к л м н о п р с т у ф х ц ч ш щ ъ ы ь э ю я</span>
             </div>
             <div>
-              <span className="font-bold text-blue-600">3. Цифры:</span> 0 1 2 3 4 5 6 7 8 9
+              <span className="font-bold text-[#2DD4BF]">3. Цифры: </span>
+              <span className="text-amber-300">0 1 2 3 4 5 6 7 8 9</span>
             </div>
           </div>
-          <p className="text-slate-500 text-[11px]">
-            Сфотографируйте лист при хорошем свете и загрузите сюда (или просто отправьте фото в чат боту).
+          <p className="text-[11px] text-slate-400 leading-relaxed">
+            Сфотографируйте лист строго сверху при дневном или ярком комнатном освещении.
           </p>
         </div>
 
-        {/* Upload box */}
-        <label className="flex flex-col items-center justify-center p-5 border-2 border-dashed border-blue-300 rounded-2xl bg-blue-50/20 hover:border-blue-500 hover:bg-blue-50/40 cursor-pointer transition">
+        {/* Upload Dropzone */}
+        <label className="flex flex-col items-center justify-center p-7 border-2 border-dashed border-[#2DD4BF]/30 hover:border-[#2DD4BF] rounded-2xl bg-[#050811]/60 hover:bg-[#2DD4BF]/5 cursor-pointer transition group">
           {isUploading ? (
-            <div className="flex items-center space-x-2 text-blue-600 font-semibold text-xs py-2">
-              <Loader2 className="w-5 h-5 animate-spin" />
-              <span>Считываем буквы и вырезаем глифы...</span>
+            <div className="flex flex-col items-center justify-center space-y-2.5 py-3">
+              <Loader2 className="w-8 h-8 text-[#2DD4BF] animate-spin" />
+              <span className="text-xs font-bold text-white">Выполняем перспективную гомографию и сегментацию...</span>
+              <span className="text-[11px] text-slate-400">Это может занять 3-5 секунд</span>
             </div>
           ) : (
             <>
-              <Upload className="w-7 h-7 text-blue-500 mb-2" />
-              <span className="text-xs font-bold text-slate-800">Загрузить фото листа с почерком</span>
-              <span className="text-[11px] text-slate-400 mt-0.5">JPG или PNG со смартфона</span>
+              <div className="w-12 h-12 rounded-2xl bg-[#2DD4BF]/10 text-[#2DD4BF] flex items-center justify-center mb-3 group-hover:scale-110 transition">
+                <UploadCloud className="w-6 h-6" />
+              </div>
+              <span className="text-sm font-bold text-white">
+                Загрузить фото листа А4
+              </span>
+              <span className="text-xs text-slate-400 mt-1">
+                Поддерживаются JPG, PNG, WEBP любого разрешения со смартфона
+              </span>
             </>
           )}
           <input
@@ -103,24 +133,36 @@ export const CalibrationModal: React.FC<CalibrationModalProps> = ({
 
         {/* Feedback Messages */}
         {resultMessage && (
-          <div className="flex items-center space-x-2 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>{resultMessage}</span>
+          <div className="mt-4 flex items-start gap-2.5 p-3.5 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs">
+            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+            <div>
+              <div className="font-bold text-emerald-200">Почерк успешно обучен!</div>
+              <div>{resultMessage}</div>
+              {extractedCount !== null && (
+                <div className="text-[11px] text-emerald-400/80 mt-1">
+                  Извлечено и векторизовано глифов: {extractedCount}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
         {errorMessage && (
-          <div className="flex items-center space-x-2 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium">
-            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-            <span>{errorMessage}</span>
+          <div className="mt-4 flex items-start gap-2.5 p-3.5 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs">
+            <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+            <div>
+              <div className="font-bold text-rose-200">Ошибка обработки</div>
+              <div>{errorMessage}</div>
+            </div>
           </div>
         )}
 
+        {/* Action button */}
         <button
           onClick={onClose}
-          className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition"
+          className="w-full mt-6 py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition"
         >
-          Закрыть
+          {resultMessage ? 'Отлично, применить в Студии' : 'Закрыть'}
         </button>
       </div>
     </div>
