@@ -134,28 +134,41 @@ async def generate_conspectus(req: GenerateRequest):
         pdf_url = None
         preview_url = None
 
-        # 5. If user is authenticated, upload to Supabase storage & DB
+        # 5. If user is authenticated with a valid UUID or guest
+        import uuid as _uuid
+        import time as _time
+
+        def _is_valid_uuid(val: str) -> bool:
+            try:
+                _uuid.UUID(str(val))
+                return True
+            except (ValueError, AttributeError, TypeError):
+                return False
+
         if req.user_id:
-            safe_title = "".join(c for c in title if c.isalnum() or c in (" ", "-", "_"))[:20]
+            safe_ascii_suffix = f"{int(_time.time())}_{_uuid.uuid4().hex[:6]}"
+            safe_user_path = req.user_id if _is_valid_uuid(req.user_id) else f"guests/{req.user_id}"
+            
             pdf_url = await supabase_service.upload_asset(
                 file_bytes=pdf_bytes,
-                remote_filename=f"users/{req.user_id}/conspectus_{safe_title}.pdf",
+                remote_filename=f"users/{safe_user_path}/conspectus_{safe_ascii_suffix}.pdf",
                 content_type="application/pdf"
             )
             preview_url = await supabase_service.upload_asset(
                 file_bytes=preview_bytes,
-                remote_filename=f"users/{req.user_id}/preview_{safe_title}.jpg",
+                remote_filename=f"users/{safe_user_path}/preview_{safe_ascii_suffix}.jpg",
                 content_type="image/jpeg"
             )
 
-            await supabase_service.log_conspectus(
-                user_id=req.user_id,
-                title=title,
-                mode=req.mode,
-                page_count=len(pages),
-                pdf_url=pdf_url,
-                preview_url=preview_url
-            )
+            if _is_valid_uuid(req.user_id):
+                await supabase_service.log_conspectus(
+                    user_id=req.user_id,
+                    title=title,
+                    mode=req.mode,
+                    page_count=len(pages),
+                    pdf_url=pdf_url,
+                    preview_url=preview_url
+                )
 
         pdf_b64 = base64.b64encode(pdf_bytes).decode("utf-8")
 
